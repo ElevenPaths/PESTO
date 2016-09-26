@@ -235,7 +235,7 @@ def main(arg_path, arg_analysis_tag):
 
                                 conn.commit()
 
-                    except pefile.PEFormatError, e:
+                    except (pefile.PEFormatError, Exception), e:
                         with open(log_filename, mode='a') as f_error:
                             f_error.write(str(datetime.datetime.now()) + " -- Error in file: " + file_path +
                                           "\n\tError info: " + repr(e))
