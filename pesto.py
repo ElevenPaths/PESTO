@@ -144,6 +144,9 @@ def main(arg_path, arg_analysis_tag):
 
         continue_exec = False
 
+        print "Error in database initialization. Try checking user permissions to script location directory." \
+              "\n\tError info: " + repr(e)
+
         with open(log_filename, mode='a') as f_error:
             if conn is None:
                 f_error.write(str(datetime.datetime.now()) + " -- Error in database creation/connection: "
@@ -152,9 +155,6 @@ def main(arg_path, arg_analysis_tag):
                 f_error.write(str(datetime.datetime.now()) + " -- Error in database cursor retrieving: "
                                                              "\n\tError info: " + repr(e))
                 conn.close()
-    finally:
-        print "Error in database initialization. Try checking user permissions to script location directory." \
-              "\n\tError info: " + repr(e)
 
     if continue_exec:
 
