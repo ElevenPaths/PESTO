@@ -1,5 +1,5 @@
-# PESTO: PE (files) Statistical Tool
-============================
+PESTO: PE (files) Statistical Tool
+====================================
 
 Description
 -----------
@@ -23,8 +23,8 @@ The program requires a tag that will be used as a suffix for logs and database f
 so different analysis can be done in the same directory.
 
 The information provided by the script is:
-• Percentage of .DLL and .EXE files with i386, AMD64 or other architecture.
-• Percentage of ASLR, NO_SEH, DEP and CFG flags enabled or disabled in the headers.
-• After finishing the analysis it will prompt to export results in a SQL or CSV format. 
+- Percentage of .DLL and .EXE files with i386, AMD64 or other architecture.
+- Percentage of ASLR, NO_SEH, DEP and CFG flags enabled or disabled in the headers.
+- After finishing the analysis it will prompt to export results in a SQL or CSV format. 
 
 It will create as well a .db file which is a sqlite file with the information collected.
