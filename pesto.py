@@ -1,9 +1,28 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+ Copyright (C) 2016 Eleven Paths
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+"""
+
 import hashlib
 import os.path
 import sys
 import pefile
 import datetime
 import sqlite3
+import argparse
 
 
 class PESecurityCheck:
@@ -94,16 +113,16 @@ def print_statistics(dict_results):
 
     print "\n\t\tASLR (disabled): %d/%d (%d%c)" % (dict_results.get('num_aslr'), num_files, percent_aslr, chr(37))
     print "\t\tDEP (disabled): %d/%d (%d%c)" % (dict_results.get('num_dep'), num_files, percent_dep, chr(37))
-    print "\t\tSEH (enabled): %d/%d (%d%c)" % (dict_results.get('num_seh'), num_files, percent_seh, chr(37))
+    print "\t\tNO_SEH (disabled): %d/%d (%d%c)" % (dict_results.get('num_seh'), num_files, percent_seh, chr(37))
     print "\t\tCFG (disabled): %d/%d (%d%c)" % (dict_results.get('num_cfg'), num_files, percent_cfg, chr(37))
 
-    print "\nRisk files:"
+    print "\nFiles without any active guard:\n"
 
     if len(dict_results.get('risk_files')):
         for rf in dict_results.get('risk_files'):
             print "\t\t" + rf[0]
     else:
-        print "\t\tNo risk files found."
+        print "\t\tNo files found."
 
     print "\n------------------------------------------------------------------------------"
 
@@ -116,12 +135,11 @@ def main(arg_path, arg_analysis_tag):
     progress = 0
     num_files = 0
 
-    log_filename = str(datetime.datetime.now()) + "__" + str(os.getpid()) + ".log"
-
-    # Todo: Check if problems occurs when try to create a new BD
+    log_filename = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".log"
+    database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".db"
 
     try:
-        conn = sqlite3.connect('database.db')
+        conn = sqlite3.connect(database_name)
         cursor = conn.cursor()
 
         sql = "CREATE TABLE if not exists \"file_info\" (" \
@@ -144,16 +162,16 @@ def main(arg_path, arg_analysis_tag):
 
         continue_exec = False
 
-        print "Error in database initialization. Try checking user permissions to script location directory." \
+        print "Error in database initialization. Try checking user permissions in this directory." \
               "\n\tError info: " + repr(e)
 
         with open(log_filename, mode='a') as f_error:
             if conn is None:
                 f_error.write(str(datetime.datetime.now()) + " -- Error in database creation/connection: "
-                                                             "\n\tError info: " + repr(e))
+                                                             "\n\tError info: " + repr(e) + "\n")
             elif cursor is None:
                 f_error.write(str(datetime.datetime.now()) + " -- Error in database cursor retrieving: "
-                                                             "\n\tError info: " + repr(e))
+                                                             "\n\tError info: " + repr(e) + "\n")
                 conn.close()
 
     if continue_exec:
@@ -168,12 +186,12 @@ def main(arg_path, arg_analysis_tag):
                     if filename.endswith('.exe') or filename.endswith('.dll'):
                         num_files += 1
 
-            print "\n%d .EXE y .DLL files found in %s\n" % (num_files, path)
+            print "\n%d .EXE and .DLL files found in %s\n" % (num_files, path)
 
         except Exception, e:
             with open(log_filename, mode='a') as f_error:
                 f_error.write(str(datetime.datetime.now()) + " -- Error in files pre-count : "
-                                                             "\n\tError info: " + repr(e))
+                                                             "\n\tError info: " + repr(e) + "\n")
 
         dict_results = {}
 
@@ -183,7 +201,7 @@ def main(arg_path, arg_analysis_tag):
 
                 filename = filename.lower()
 
-                # TODO: Change by is_exe and is_dll functions
+                # TODO: is_exe() and is_dll() functions from pefile could be used instead of extension reading.
                 if filename.endswith('.exe') or filename.endswith('.dll'):
 
                     file_path = os.path.join(folder, filename)
@@ -198,7 +216,7 @@ def main(arg_path, arg_analysis_tag):
                     except Exception, e:
                         with open(log_filename, mode='a') as f_error:
                             f_error.write(str(datetime.datetime.now()) + " -- Error calculating file hash: " +
-                                          file_path + "\n\tError info: " + repr(e))
+                                          file_path + "\n\tError info: " + repr(e) + "\n")
 
                     finally:
                         if f is not None:
@@ -210,7 +228,6 @@ def main(arg_path, arg_analysis_tag):
 
                             cursor.execute(sql)
 
-                            # This check avoid reanalyze duplicated files
                             if not cursor.fetchone():
                                 pe = pefile.PE(file_path, True)
 
@@ -238,16 +255,14 @@ def main(arg_path, arg_analysis_tag):
                     except (pefile.PEFormatError, Exception), e:
                         with open(log_filename, mode='a') as f_error:
                             f_error.write(str(datetime.datetime.now()) + " -- Error in file: " + file_path +
-                                          "\n\tError info: " + repr(e))
+                                          "\n\tError info: " + repr(e) + "\n")
 
                     progress += 1
 
                     print_progress(progress, num_files, prefix='Progress:', suffix='Complete', bar_length=50)
 
         # Get data results from database
-
         try:
-
             sql = "select * from file_info"
             cursor.execute(sql)
             dict_results.update({'num_files': len(cursor.fetchall())})
@@ -268,7 +283,7 @@ def main(arg_path, arg_analysis_tag):
             cursor.execute(sql)
             dict_results.update({'num_dep': len(cursor.fetchall())})
 
-            sql = "select * from file_info where file_info.SEH"
+            sql = "select * from file_info where not file_info.SEH"
             cursor.execute(sql)
             dict_results.update({'num_seh': len(cursor.fetchall())})
 
@@ -290,7 +305,7 @@ def main(arg_path, arg_analysis_tag):
             dict_results.update({'num_other_arch': len(cursor.fetchall())})
 
             sql = "select file_path from file_info " \
-                  "where not file_info.CFG and not file_info.ASLR and not file_info.DEP and file_info.SEH"
+                  "where not file_info.CFG and not file_info.ASLR and not file_info.DEP and not file_info.SEH"
             cursor.execute(sql)
             dict_results.update({'risk_files': cursor.fetchall()})
 
@@ -299,7 +314,7 @@ def main(arg_path, arg_analysis_tag):
         except Exception, e:
             with open(log_filename, mode='a') as f_error:
                 f_error.write(str(datetime.datetime.now()) + " -- Failed to retrieve statistics from DB: " +
-                              "\n\tError info: " + repr(e))
+                              "\n\tError info: " + repr(e) + "\n")
             print "Error: Failed to retrieve statistics from DB\n\tError info: " + repr(e)
 
         print "\nErrors exported to " + log_filename
@@ -316,6 +331,9 @@ def main(arg_path, arg_analysis_tag):
             response = raw_input()
 
         if response.lower() != 'n':
+
+            export_filename = database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_')
+
             try:
                 sql = "select * from file_info"
                 cursor.execute(sql)
@@ -323,7 +341,7 @@ def main(arg_path, arg_analysis_tag):
                 if response.lower() == 'c':
                     print "Exporting to CSV"
 
-                    with open(arg_analysis_tag + '.csv', mode='a')as f:
+                    with open(export_filename + '.csv', mode='a')as f:
 
                         header = '"id_analysis","root_folder","file_path","file_name",' \
                                  '"file_extension","architecture","file_hash","ASLR","DEP","SEH","CFG"'
@@ -338,7 +356,7 @@ def main(arg_path, arg_analysis_tag):
 
                 if response.lower() == 's':
                     print "Exporting to SQL"
-                    with open(arg_analysis_tag + '.sql', mode='a')as f:
+                    with open(export_filename + '.sql', mode='a')as f:
                         sql = "BEGIN TRANSACTION;\n\n" \
                               "CREATE TABLE \"file_info\" (\n" \
                               "\t`id_analysis`	TEXT NOT NULL,\n" \
@@ -368,25 +386,27 @@ def main(arg_path, arg_analysis_tag):
             except Exception, e:
                 with open(log_filename, mode='a') as f_error:
                     f_error.write(str(datetime.datetime.now()) + " -- Error in data export:" +
-                                  "\n\tError info: " + repr(e))
+                                  "\n\tError info: " + repr(e) + "\n")
 
         if cursor is not None:
             cursor.close()
         if conn is not None:
             conn.close()
 
-        # TODO: Handle errors when try to remove DB.
         try:
-            os.remove('database.db')
+            os.remove(database_name)
         except Exception, e:
             with open(log_filename, mode='a') as f_error:
                 f_error.write(str(datetime.datetime.now()) + " -- Error. Unable to remove database:" +
-                              "\n\tError info: " + repr(e))
+                              "\n\tError info: " + repr(e) + "\n")
 
 if __name__ == '__main__':
 
-    if len(sys.argv) < 3:
-        print 'Usage: %s <file_path> <analysis_tag>' % sys.argv[0]
-        sys.exit("Invalid number of arguments")
-    else:
-        main(arg_path=sys.argv[1], arg_analysis_tag=sys.argv[2])
+    print "\nPESTO (c) ElevenPaths. Version: 0.1.0.0\n"
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('directory_path', type=str, help='Directory to analyze.')
+    parser.add_argument('analysis_tag', type=str, help='Use any name as tags to identify your investigation.')
+    args = parser.parse_args()
+
+    main(arg_path=sys.argv[1], arg_analysis_tag=sys.argv[2])
