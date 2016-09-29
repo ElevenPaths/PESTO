@@ -23,7 +23,7 @@ The program requires a tag that will be used as a suffix for logs and database f
 so different analysis can be done in the same directory.
 
 The information provided by the script is:
-- Percentage of .DLL and .EXE files with i386, AMD64 or other architecture.
+- Percentage of .DLL and .EXE files with i386, AMD64, IA64 or other architecture.
 - Percentage of ASLR, NO_SEH, DEP and CFG flags enabled or disabled in the headers.
 - After finishing the analysis it will prompt to export results in a SQL or CSV format. 
 
