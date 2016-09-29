@@ -83,11 +83,15 @@ def print_progress(iteration, total, prefix='', suffix='', decimals=1, bar_lengt
 def print_statistics(dict_results):
     num_files = dict_results.get('num_files')
 
+    num_files_ini = dict_results.get('num_files_ini')
+    percent_failed = (num_files_ini - num_files) / num_files_ini * 100
+
     percent_exe = (dict_results.get('num_exe') / float(dict_results.get('num_files'))) * 100
     percent_dll = (dict_results.get('num_dll') / float(dict_results.get('num_files'))) * 100
 
     percent_i386 = (dict_results.get('num_i386') / float(dict_results.get('num_files'))) * 100
     percent_amd64 = (dict_results.get('num_amd64') / float(dict_results.get('num_files'))) * 100
+    percent_ia64 = (dict_results.get('num_ia64') / float(dict_results.get('num_files'))) * 100
     percent_other = (dict_results.get('num_other_arch') / float(dict_results.get('num_files'))) * 100
 
     percent_aslr = (dict_results.get('num_aslr') / float(dict_results.get('num_files'))) * 100
@@ -102,11 +106,13 @@ def print_statistics(dict_results):
 
     print "\n\t\tEXE: %d/%d (%d%c)" % (dict_results.get('num_exe'), num_files, percent_exe, chr(37))
     print "\t\tDLL: %d/%d (%d%c)" % (dict_results.get('num_dll'), num_files, percent_dll, chr(37))
+    print "\t\tFailed: %d/%d (%d%c)" % ((num_files_ini - num_files), num_files_ini, percent_failed, chr(37))
 
     print "\nArchitecture:"
 
     print "\n\t\tI386: %d/%d (%d%c)" % (dict_results.get('num_i386'), num_files, percent_i386, chr(37))
     print "\t\tAMD64: %d/%d (%d%c)" % (dict_results.get('num_amd64'), num_files, percent_amd64, chr(37))
+    print "\t\tIA64: %d/%d (%d%c)" % (dict_results.get('num_ia64'), num_files, percent_ia64, chr(37))
     print "\t\tOther: %d/%d (%d%c)" % (dict_results.get('num_other_arch'), num_files, percent_other, chr(37))
 
     print "\nGuards:"
@@ -133,7 +139,7 @@ def main(arg_path, arg_analysis_tag):
 
     path = arg_path
     progress = 0
-    num_files = 0
+    num_files_ini = 0
 
     log_filename = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".log"
     database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".db"
@@ -184,9 +190,9 @@ def main(arg_path, arg_analysis_tag):
 
                     filename = filename.lower()
                     if filename.endswith('.exe') or filename.endswith('.dll'):
-                        num_files += 1
+                        num_files_ini += 1
 
-            print "\n%d .EXE and .DLL files found in %s\n" % (num_files, path)
+            print "\n%d .EXE and .DLL files found in %s\n" % (num_files_ini, path)
 
         except Exception, e:
             with open(log_filename, mode='a') as f_error:
@@ -259,10 +265,12 @@ def main(arg_path, arg_analysis_tag):
 
                     progress += 1
 
-                    print_progress(progress, num_files, prefix='Progress:', suffix='Complete', bar_length=50)
+                    print_progress(progress, num_files_ini, prefix='Progress:', suffix='Complete', bar_length=50)
 
         # Get data results from database
         try:
+            dict_results.update({'num_files_ini': num_files_ini})
+
             sql = "select * from file_info"
             cursor.execute(sql)
             dict_results.update({'num_files': len(cursor.fetchall())})
@@ -299,8 +307,13 @@ def main(arg_path, arg_analysis_tag):
             cursor.execute(sql)
             dict_results.update({'num_amd64': len(cursor.fetchall())})
 
+            sql = "select * from file_info where file_info.architecture like 'IA64'"
+            cursor.execute(sql)
+            dict_results.update({'num_ia64': len(cursor.fetchall())})
+
             sql = "select * from file_info where file_info.architecture not like 'I386' " \
-                  "and file_info.architecture not like 'AMD64'"
+                  "and file_info.architecture not like 'AMD64'" \
+                  "and file_info.architecture not like 'IA64'"
             cursor.execute(sql)
             dict_results.update({'num_other_arch': len(cursor.fetchall())})
 
@@ -331,7 +344,7 @@ def main(arg_path, arg_analysis_tag):
             response = raw_input()
 
         if response.lower() != 'n':
-
+            # TODO: Check and show export result
             export_filename = database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_')
 
             try:
