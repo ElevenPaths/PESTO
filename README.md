@@ -28,3 +28,10 @@ The information provided by the script is:
 - After finishing the analysis it will prompt to export results in a SQL or CSV format. 
 
 It will create as well a .db file which is a sqlite file with the information collected.
+
+Related tools
+-------------
+
+- https://github.com/olliencc/WinBinaryAudit
+- https://blog.netspi.com/verifying-aslr-dep-and-safeseh-with-powershell/
+- https://github.com/angelorighi/pescheck/blob/master/pescheck.py
