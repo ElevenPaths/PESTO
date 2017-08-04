@@ -422,4 +422,4 @@ if __name__ == '__main__':
     parser.add_argument('analysis_tag', type=str, help='Use any name as tags to identify your investigation.')
     args = parser.parse_args()
 
-    main(arg_path=sys.argv[1], arg_analysis_tag=sys.argv[2])
+    main(arg_path=args.directory_path, arg_analysis_tag=args.analysis_tag)
