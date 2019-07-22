@@ -26,25 +26,55 @@ import argparse
 
 
 class PESecurityCheck:
+   
+    # DllCharacteristics    
+    IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA = 0x0020  # High Entropy ASLR 64bit
     IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x0040  # ASLR
+    IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY = 0x0080  # Signature verification
     IMAGE_DLLCHARACTERISTICS_NX_COMPAT = 0x0100  # DEP
+    IMAGE_DLLCHARACTERISTICS_NO_ISOLATION = 0x0200
     IMAGE_DLLCHARACTERISTICS_NO_SEH = 0x0400  # SEH
+    IMAGE_DLLCHARACTERISTICS_NO_BIND = 0x0800      
+    IMAGE_DLLCHARACTERISTICS_APPCONTAINER = 0x1000
+    IMAGE_DLLCHARACTERISTICS_WDM_DRIVER = 0x2000  
     IMAGE_DLLCHARACTERISTICS_GUARD_CF = 0x4000  # CFG
+    IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000
 
     def __init__(self, pe):
         self.pe = pe
+        
+    def highEntropy(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA)    
 
     def aslr(self):
         return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE)
 
+    def forceIntegrity(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY)
+
     def dep(self):
         return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_NX_COMPAT)
+
+    def noIsolation(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_NO_ISOLATION)
 
     def seh(self):
         return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_NO_SEH)
 
+    def noBind(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_NO_BIND)
+
+    def appContainer(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_APPCONTAINER)
+
+    def wmdDriver(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_WDM_DRIVER)
+        
     def cfg(self):
         return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_GUARD_CF)
+    
+    def terminalServerAware(self):
+        return bool(self.pe.OPTIONAL_HEADER.DllCharacteristics & self.IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE)
 
 
 def get_arch_string(arch):
@@ -98,39 +128,53 @@ def print_statistics(dict_results):
     percent_dep = (dict_results.get('num_dep') / float(dict_results.get('num_files'))) * 100
     percent_seh = (dict_results.get('num_seh') / float(dict_results.get('num_files'))) * 100
     percent_cfg = (dict_results.get('num_cfg') / float(dict_results.get('num_files'))) * 100
+    percent_highEntropy = (dict_results.get('num_high_entropy') / float(dict_results.get('num_files'))) * 100
+    percent_forceIntegrity = (dict_results.get('num_force_integrity') / float(dict_results.get('num_files'))) * 100
+    percent_noIsolation = (dict_results.get('num_no_isolation') / float(dict_results.get('num_files'))) * 100
+    percent_noBind = (dict_results.get('num_no_bind') / float(dict_results.get('num_files'))) * 100
+    percent_appcontainer = (dict_results.get('num_appcontaier') / float(dict_results.get('num_files'))) * 100
+    percent_wdmDriver = (dict_results.get('num_wdm_driver') / float(dict_results.get('num_files'))) * 100
+    percent_TerminalServerAware = (dict_results.get('num_terminal_server_aware') / float(dict_results.get('num_files'))) * 100
 
-    print "\n\nRESULTS:\n------------------------------------------------------------------------------"
-    print "Total files analyzed : " + str(dict_results.get('num_files'))
+    print("\n\nRESULTS:\n------------------------------------------------------------------------------")
+    print("Total files analyzed : " + str(dict_results.get('num_files')))
 
-    print "\nFile types:"
+    print("\nFile types:")
 
-    print "\n\t\tEXE: %d/%d (%d%c)" % (dict_results.get('num_exe'), num_files, percent_exe, chr(37))
-    print "\t\tDLL: %d/%d (%d%c)" % (dict_results.get('num_dll'), num_files, percent_dll, chr(37))
-    print "\t\tFailed: %d/%d (%d%c)" % ((num_files_ini - num_files), num_files_ini, percent_failed, chr(37))
+    print("\n\t\tEXE: %d/%d (%d%c)" % (dict_results.get('num_exe'), num_files, percent_exe, chr(37)))
+    print("\t\tDLL: %d/%d (%d%c)" % (dict_results.get('num_dll'), num_files, percent_dll, chr(37)))
+    print("\t\tFailed: %d/%d (%d%c)" % ((num_files_ini - num_files), num_files_ini, percent_failed, chr(37)))
 
-    print "\nArchitecture:"
+    print("\nArchitecture:")
 
-    print "\n\t\tI386: %d/%d (%d%c)" % (dict_results.get('num_i386'), num_files, percent_i386, chr(37))
-    print "\t\tAMD64: %d/%d (%d%c)" % (dict_results.get('num_amd64'), num_files, percent_amd64, chr(37))
-    print "\t\tIA64: %d/%d (%d%c)" % (dict_results.get('num_ia64'), num_files, percent_ia64, chr(37))
-    print "\t\tOther: %d/%d (%d%c)" % (dict_results.get('num_other_arch'), num_files, percent_other, chr(37))
+    print("\n\t\tI386: %d/%d (%d%c)" % (dict_results.get('num_i386'), num_files, percent_i386, chr(37)))
+    print("\t\tAMD64: %d/%d (%d%c)" % (dict_results.get('num_amd64'), num_files, percent_amd64, chr(37)))
+    print("\t\tIA64: %d/%d (%d%c)" % (dict_results.get('num_ia64'), num_files, percent_ia64, chr(37)))
+    print("\t\tOther: %d/%d (%d%c)" % (dict_results.get('num_other_arch'), num_files, percent_other, chr(37)))
 
-    print "\nGuards:"
+    print("\nGuards:")
 
-    print "\n\t\tASLR (disabled): %d/%d (%d%c)" % (dict_results.get('num_aslr'), num_files, percent_aslr, chr(37))
-    print "\t\tDEP (disabled): %d/%d (%d%c)" % (dict_results.get('num_dep'), num_files, percent_dep, chr(37))
-    print "\t\tNO_SEH (disabled): %d/%d (%d%c)" % (dict_results.get('num_seh'), num_files, percent_seh, chr(37))
-    print "\t\tCFG (disabled): %d/%d (%d%c)" % (dict_results.get('num_cfg'), num_files, percent_cfg, chr(37))
+    print("\n\t\tASLR (disabled): %d/%d (%d%c)" % (dict_results.get('num_aslr'), num_files, percent_aslr, chr(37)))
+    print("\t\tDEP (disabled): %d/%d (%d%c)" % (dict_results.get('num_dep'), num_files, percent_dep, chr(37)))
+    print("\t\tNO_SEH (disabled): %d/%d (%d%c)" % (dict_results.get('num_seh'), num_files, percent_seh, chr(37)))
+    print("\t\tCFG (disabled): %d/%d (%d%c)" % (dict_results.get('num_cfg'), num_files, percent_cfg, chr(37)))
+    print("\t\tHIGH_ENTROPY (disabled): %d/%d (%d%c)" % (dict_results.get('num_high_entropy'), num_files, percent_highEntropy, chr(37)))
+    print("\t\tFORCE_INTEGRITY (disabled): %d/%d (%d%c)" % (dict_results.get('num_force_integrity'), num_files, percent_forceIntegrity, chr(37)))
+    print("\t\tNO_ISOLATION (disabled): %d/%d (%d%c)" % (dict_results.get('num_no_isolation'), num_files, percent_noIsolation, chr(37)))
+    print("\t\tNO_BIND (disabled): %d/%d (%d%c)" % (dict_results.get('num_no_bind'), num_files, percent_noBind, chr(37)))
+    print("\t\tAPP_CONTAINER (disabled): %d/%d (%d%c)" % (dict_results.get('num_appcontaier'), num_files, percent_appcontainer, chr(37)))
+    print("\t\tWDM_DRIVER (disabled): %d/%d (%d%c)" % (dict_results.get('num_wdm_driver'), num_files, percent_wdmDriver, chr(37)))
+    print("\t\tTERMINAl_SERVER_AWARE (disabled): %d/%d (%d%c)" % (dict_results.get('num_terminal_server_aware'), num_files, percent_TerminalServerAware, chr(37)))
 
-    print "\nFiles without any active guard:\n"
+    print("\nFiles without any active guard:\n")
 
     if len(dict_results.get('risk_files')):
         for rf in dict_results.get('risk_files'):
-            print "\t\t" + rf[0]
+            print("\t\t" + rf[0])
     else:
-        print "\t\tNo files found."
+        print("\t\tNo files found.")
 
-    print "\n------------------------------------------------------------------------------"
+    print("\n------------------------------------------------------------------------------")
 
 
 def main(arg_path, arg_analysis_tag):
@@ -159,17 +203,25 @@ def main(arg_path, arg_analysis_tag):
               "`ASLR`	INTEGER," \
               "`DEP`	INTEGER," \
               "`SEH`	INTEGER," \
-              "`CFG`	INTEGER" \
+              "`CFG`	INTEGER," \
+              "`HIGH_ENTROPY`    INTEGER," \
+              "`FORCE_INTEGRITY`    INTEGER," \
+              "`NO_ISOLATION`    INTEGER," \
+              "`NO_BIND`    INTEGER," \
+              "`APPCONTAINER`    INTEGER," \
+              "`WDM_DRIVER`    INTEGER," \
+              "`TERMINAL_SERVER_AWARE`    INTEGER" \
               ");"
 
         cursor.execute(sql)
-
-    except Exception, e:
+        
+        
+    except Exception as e:
 
         continue_exec = False
 
-        print "Error in database initialization. Try checking user permissions in this directory." \
-              "\n\tError info: " + repr(e)
+        print("Error in database initialization. Try checking user permissions in this directory." \
+              "\n\tError info: " + repr(e))
 
         with open(log_filename, mode='a') as f_error:
             if conn is None:
@@ -192,9 +244,9 @@ def main(arg_path, arg_analysis_tag):
                     if filename.endswith('.exe') or filename.endswith('.dll'):
                         num_files_ini += 1
 
-            print "\n%d .EXE and .DLL files found in %s\n" % (num_files_ini, path)
+            print("\n%d .EXE and .DLL files found in %s\n" % (num_files_ini, path))
 
-        except Exception, e:
+        except Exception as e:
             with open(log_filename, mode='a') as f_error:
                 f_error.write(str(datetime.datetime.now()) + " -- Error in files pre-count : "
                                                              "\n\tError info: " + repr(e) + "\n")
@@ -219,9 +271,9 @@ def main(arg_path, arg_analysis_tag):
                     try:
                         f = open(file_path, 'rb')
                         file_hash = hashlib.sha256(f.read()).hexdigest()
-                    except Exception, e:
+                    except Exception as e:
                         with open(log_filename, mode='a') as f_error:
-                            f_error.write(str(datetime.datetime.now()) + " -- Error calculating file hash: " +
+                            f_error.write(str(datetime.datetime.now()) + " -- Error calculating file hash: " + 
                                           file_path + "\n\tError info: " + repr(e) + "\n")
 
                     finally:
@@ -243,24 +295,32 @@ def main(arg_path, arg_analysis_tag):
                                 dep = ps.dep()
                                 cfg = ps.cfg()
                                 seh = ps.seh()
+                                highEntropy = ps.highEntropy()
+                                forceIntegrity = ps.forceIntegrity()
+                                noIsolation = ps.noIsolation()
+                                noBind = ps.noBind()
+                                appContainer = ps.appContainer()
+                                wmdDriver = ps.wmdDriver()
+                                terminalServerAware = ps.terminalServerAware()
+                                
                                 extension = filename[-4:]
                                 architecture = get_arch_string(pe.FILE_HEADER.__getattribute__('Machine'))
 
                                 pe.close()
 
                                 sql = "INSERT INTO `file_info`(`id_analysis`,`root_folder`,`file_path`,`file_name`," \
-                                      "`file_extension`,`architecture`,`file_hash`,`ASLR`,`DEP`,`SEH`,`CFG`) " \
-                                      "VALUES ('%s',\"%s\",\"%s\",'%s','%s','%s',\"%s\",%d,%d,%d,%d);" % \
+                                      "`file_extension`,`architecture`,`file_hash`,`ASLR`,`DEP`,`SEH`,`CFG`,`HIGH_ENTROPY`,`FORCE_INTEGRITY`,`NO_ISOLATION`,`NO_BIND`,`APPCONTAINER`,`WDM_DRIVER`,`TERMINAL_SERVER_AWARE`) " \
+                                      "VALUES ('%s',\"%s\",\"%s\",'%s','%s','%s',\"%s\",%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d);" % \
                                       (arg_analysis_tag, path, file_path, filename, extension, architecture,
-                                       file_hash, aslr, dep, seh, cfg)
+                                       file_hash, aslr, dep, seh, cfg, highEntropy, forceIntegrity, noIsolation, noBind, appContainer, wmdDriver, terminalServerAware)
 
                                 cursor.execute(sql)
 
                                 conn.commit()
 
-                    except (pefile.PEFormatError, Exception), e:
+                    except (pefile.PEFormatError, Exception) as  e:
                         with open(log_filename, mode='a') as f_error:
-                            f_error.write(str(datetime.datetime.now()) + " -- Error in file: " + file_path +
+                            f_error.write(str(datetime.datetime.now()) + " -- Error in file: " + file_path + 
                                           "\n\tError info: " + repr(e) + "\n")
 
                     progress += 1
@@ -298,7 +358,35 @@ def main(arg_path, arg_analysis_tag):
             sql = "select * from file_info where not file_info.CFG"
             cursor.execute(sql)
             dict_results.update({'num_cfg': len(cursor.fetchall())})
-
+            
+            sql = "select * from file_info where not file_info.HIGH_ENTROPY"
+            cursor.execute(sql)
+            dict_results.update({'num_high_entropy': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.FORCE_INTEGRITY"
+            cursor.execute(sql)
+            dict_results.update({'num_force_integrity': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.NO_ISOLATION"
+            cursor.execute(sql)
+            dict_results.update({'num_no_isolation': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.NO_BIND"
+            cursor.execute(sql)
+            dict_results.update({'num_no_bind': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.APPCONTAINER"
+            cursor.execute(sql)
+            dict_results.update({'num_appcontaier': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.WDM_DRIVER"
+            cursor.execute(sql)
+            dict_results.update({'num_wdm_driver': len(cursor.fetchall())})
+            
+            sql = "select * from file_info where not file_info.TERMINAL_SERVER_AWARE"
+            cursor.execute(sql)
+            dict_results.update({'num_terminal_server_aware': len(cursor.fetchall())})
+            
             sql = "select * from file_info where file_info.architecture like 'I386'"
             cursor.execute(sql)
             dict_results.update({'num_i386': len(cursor.fetchall())})
@@ -324,24 +412,24 @@ def main(arg_path, arg_analysis_tag):
 
             print_statistics(dict_results=dict_results)
 
-        except Exception, e:
+        except Exception as e:
             with open(log_filename, mode='a') as f_error:
-                f_error.write(str(datetime.datetime.now()) + " -- Failed to retrieve statistics from DB: " +
+                f_error.write(str(datetime.datetime.now()) + " -- Failed to retrieve statistics from DB: " + 
                               "\n\tError info: " + repr(e) + "\n")
-            print "Error: Failed to retrieve statistics from DB\n\tError info: " + repr(e)
+            print("Error: Failed to retrieve statistics from DB\n\tError info: " + repr(e))
 
-        print "\nErrors exported to " + log_filename
+        print("\nErrors exported to " + log_filename)
 
-        print "\nExport data? Press:"
-        print "\t n -- Don't export"
-        print "\t s -- Export to SQL script"
-        print "\t c -- Export to CSV file"
+        print("\nExport data? Press:")
+        print("\t n -- Don't export")
+        print("\t s -- Export to SQL script")
+        print("\t c -- Export to CSV file")
 
-        response = raw_input()
+        response = input()
 
         while response != 'n' and response != 's' and response != 'c':
-            print 'Please, enter a valid option [[n]/[s]/[c]]'
-            response = raw_input()
+            print('Please, enter a valid option [[n]/[s]/[c]]')
+            response = input()
 
         if response.lower() != 'n':
             # TODO: Check and show export result
@@ -352,23 +440,25 @@ def main(arg_path, arg_analysis_tag):
                 cursor.execute(sql)
 
                 if response.lower() == 'c':
-                    print "Exporting to CSV"
+                    print("Exporting to CSV")
 
                     with open(export_filename + '.csv', mode='a')as f:
 
                         header = '"id_analysis","root_folder","file_path","file_name",' \
-                                 '"file_extension","architecture","file_hash","ASLR","DEP","SEH","CFG"'
+                                 '"file_extension","architecture","file_hash","ASLR",' \
+                                 '"DEP","SEH","CFG","HIGH_ENTROPY","FORCE_INTEGRITY",'\
+                                 '"NO_ISOLATION","NO_BIND","APPCONTAINER","WDM_DRIVER","TERMINAL_SERVER_AWARE"'
 
                         f.write(header)
 
                         for row in cursor.fetchall():
-                            w_row = '\n"%s","%s","%s",%s","%s","%s","%s","%d","%d","%d","%d"' % \
+                            w_row = '\n"%s","%s","%s",%s","%s","%s","%s","%d","%d","%d","%d","%d","%d","%d","%d","%d","%d","%d",' % \
                                     (row[0], row[1], row[2], row[3], row[4], row[5],
-                                     row[6], row[7], row[8], row[9], row[10])
+                                     row[6], row[7], row[8], row[9], row[10],row[11], row[12], row[13], row[14],row[15], row[16], row[17])
                             f.write(w_row)
 
                 if response.lower() == 's':
-                    print "Exporting to SQL"
+                    print("Exporting to SQL")
                     with open(export_filename + '.sql', mode='a')as f:
                         sql = "BEGIN TRANSACTION;\n\n" \
                               "CREATE TABLE \"file_info\" (\n" \
@@ -382,23 +472,31 @@ def main(arg_path, arg_analysis_tag):
                               "\t`ASLR`	INTEGER,\n" \
                               "\t`DEP`	INTEGER,\n" \
                               "\t`SEH`	INTEGER,\n" \
-                              "\t`CFG`	INTEGER\n" \
+                              "\t`CFG`    INTEGER,\n" \
+                              "\t`HIGH_ENTROPY`    INTEGER,\n" \
+                              "\t`FORCE_INTEGRITY`    INTEGER,\n" \
+                              "\t`NO_ISOLATION`    INTEGER,\n" \
+                              "\t`NO_BIND`    INTEGER,\n" \
+                              "\t`APPCONTAINER`    INTEGER,\n" \
+                              "\t`WDM_DRIVER`    INTEGER,\n" \
+                              "\t`TERMINAL_SERVER_AWARE `    INTEGER" \
                               ");\n"
                         f.write(sql)
 
                         for row in cursor.fetchall():
                             w_row = "INSERT INTO `file_info`(`id_analysis`,`root_folder`,`file_path`,`file_name`," \
                                     "`file_extension`,`architecture`,`file_hash`,`ASLR`,`DEP`,`SEH`,`CFG`) " \
-                                    "VALUES ('%s',\"%s\",\"%s\",'%s','%s','%s',\"%s\",%d,%d,%d,%d);" % \
+                                    "VALUES ('%s',\"%s\",\"%s\",'%s','%s','%s',\"%s\",%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d);" % \
                                     (row[0], row[1], row[2], row[3], row[4], row[5],
-                                     row[6], row[7], row[8], row[9], row[10])
+                                     row[6], row[7], row[8], row[9], row[10], row[11],
+                                     row[12], row[13], row[14], row[15], row[16], row[17])
 
                             f.write("\n" + w_row)
 
                         f.write("\n\nCOMMIT;")
-            except Exception, e:
+            except Exception as e:
                 with open(log_filename, mode='a') as f_error:
-                    f_error.write(str(datetime.datetime.now()) + " -- Error in data export:" +
+                    f_error.write(str(datetime.datetime.now()) + " -- Error in data export:" + 
                                   "\n\tError info: " + repr(e) + "\n")
 
         if cursor is not None:
@@ -408,14 +506,15 @@ def main(arg_path, arg_analysis_tag):
 
         try:
             os.remove(database_name)
-        except Exception, e:
+        except Exception as e:
             with open(log_filename, mode='a') as f_error:
-                f_error.write(str(datetime.datetime.now()) + " -- Error. Unable to remove database:" +
+                f_error.write(str(datetime.datetime.now()) + " -- Error. Unable to remove database:" + 
                               "\n\tError info: " + repr(e) + "\n")
+
 
 if __name__ == '__main__':
 
-    print "\nPESTO (c) ElevenPaths. Version: 0.1.0.0\n"
+    print("\nPESTO (c) ElevenPaths. Version: 0.2.0.0\n")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('directory_path', type=str, help='Directory to analyze.')
