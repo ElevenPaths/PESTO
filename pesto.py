@@ -514,7 +514,7 @@ def main(arg_path, arg_analysis_tag):
 
 if __name__ == '__main__':
 
-    print("\nPESTO (c) ElevenPaths. Version: 0.1.0.0\n")
+    print("\nPESTO (c) ElevenPaths. Version: 0.2.0.0\n")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('directory_path', type=str, help='Directory to analyze.')
