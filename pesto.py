@@ -23,7 +23,7 @@ import pefile
 import datetime
 import sqlite3
 import argparse
-
+import platform
 
 class PESecurityCheck:
    
@@ -185,8 +185,18 @@ def main(arg_path, arg_analysis_tag):
     progress = 0
     num_files_ini = 0
 
-    log_filename = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".log"
-    database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_') + ".db"
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+
+    tmp_dir_path = os.path.join(dname, arg_analysis_tag)
+
+    if not os.path.exists(tmp_dir_path):
+        os.mkdir(tmp_dir_path)
+
+    log_filename = os.path.join(tmp_dir_path, str(datetime.datetime.now()).replace(':', '_') + ".log")
+    database_name = os.path.join(tmp_dir_path, str(datetime.datetime.now()).replace(':', '_') + ".db")
+
 
     try:
         conn = sqlite3.connect(database_name)
@@ -433,7 +443,7 @@ def main(arg_path, arg_analysis_tag):
 
         if response.lower() != 'n':
             # TODO: Check and show export result
-            export_filename = database_name = arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_')
+            export_filename = database_name = os.path.join(tmp_dir_path, arg_analysis_tag + "__" + str(datetime.datetime.now()).replace(':', '_'))
 
             try:
                 sql = "select * from file_info"
